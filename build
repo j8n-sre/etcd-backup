@@ -1,0 +1,1 @@
+docker build -t park-img.ajway.co.kr/etcd:v0.2 .

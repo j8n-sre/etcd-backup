@@ -1,0 +1,53 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: test
+  namespace: kube-system
+spec:
+  schedule: "3 8 6 1 *"		  # 매년 1월 7일 0시에 백업
+  startingDeadlineSeconds: 600    # fail 시 10분 이후에는 취소
+  concurrencyPolicy: Replace      # failed job 대체
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: test
+            image: park-img.ajway.co.kr/etcd:v0.2
+            imagePullPolicy: IfNotPresent
+            resources:
+              limits:
+                memory: "100Mi"
+                cpu: "100m"
+              requests:
+                memory: "100Mi"
+                cpu: "100m"
+            command: ["/bin/sh", "-c"]
+            args:
+            - sleep 6000
+            volumeMounts:
+            - name: certs
+              mountPath: /etc/kubernetes/pki
+              readOnly: true
+            - name: etcd-backup
+              mountPath: /root/etcd-backup
+            - name: ssh-key
+              mountPath: /root/.ssh
+              readOnly: true
+          restartPolicy: OnFailure
+          volumes:
+            - name: certs
+              hostPath:
+                path: /etc/kubernetes/pki
+            - name: etcd-backup
+              hostPath:
+                path: /root/etcd-backup
+            - name: ssh-key
+              hostPath:
+                path: /root/.ssh
+          nodeSelector:
+            kubernetes.io/hostname: master
+          tolerations:
+          - key: node-role.kubernetes.io/master
+            operator: Exists
+            effect: NoSchedule
